@@ -106,8 +106,10 @@ export function PingPanel() {
       {unreachable && (
         <div className="mt-4">
           <ErrorNote>
-            Can&apos;t reach the API at {API_URL}. Check that the backend is
-            running and that this site&apos;s address is in its ALLOWED_ORIGINS.
+            Can&apos;t reach the API at {API_URL}. On free hosting it sleeps when
+            idle and takes about a minute to wake up. If this message stays,
+            check that the backend is running and that this site&apos;s address
+            is in its ALLOWED_ORIGINS.
           </ErrorNote>
         </div>
       )}

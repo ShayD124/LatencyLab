@@ -1,0 +1,13 @@
+# Render Blueprint: describes the backend so Render can create it from this repo.
+services:
+  - type: web
+    name: latencylab-api
+    runtime: docker
+    plan: free
+    region: frankfurt
+    rootDir: backend
+    healthCheckPath: /health
+    envVars:
+      # Set in the Render dashboard: the website addresses allowed to call the API.
+      - key: ALLOWED_ORIGINS
+        sync: false

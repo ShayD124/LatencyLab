@@ -10,7 +10,7 @@ It is split the way production apps usually are:
 | Part | Folder | Built with | Hosted on |
 |---|---|---|---|
 | Frontend | `frontend/` | Next.js | Vercel |
-| Backend API | `backend/` | Rust (Axum) | Your own server, in Docker, behind Caddy |
+| Backend API | `backend/` | Rust (Axum), in Docker | Render (free), or your own server behind Caddy |
 
 ## Run it on your computer
 
@@ -44,11 +44,49 @@ The page in the browser calls the API directly, and the two live on different ad
 | Setting | Where | What it does |
 |---|---|---|
 | `NEXT_PUBLIC_API_URL` | Frontend (Vercel) | Tells the page where the API is. |
-| `ALLOWED_ORIGINS` | Backend (server `.env`) | Tells the API which websites may call it. This is CORS. |
+| `ALLOWED_ORIGINS` | Backend (Render dashboard, or `.env` on your own server) | Tells the API which websites may call it. This is CORS. |
 
 If these do not match your real addresses, the page loads but shows "Can't reach the API".
 
-## Deploy it
+## Deploy it for free (Render + Vercel)
+
+The backend runs on Render's free plan and the website on Vercel. Neither needs a payment card. On the free plan the API sleeps after about 15 minutes without visitors, and the first visit after that waits up to a minute while it wakes.
+
+### 1. Backend on Render
+
+1. Sign up at https://render.com with your GitHub account.
+2. Click **New → Blueprint** and pick the `LatencyLab` repository. Render reads `render.yaml` from it.
+3. When asked for `ALLOWED_ORIGINS`, enter `http://localhost:3000` for now.
+4. Click **Apply**. The first build takes several minutes.
+5. Open the `latencylab-api` service and copy its address, which looks like `https://latencylab-api.onrender.com`. Adding `/health` to it in a browser should show `ok`.
+
+### 2. Website on Vercel
+
+1. At https://vercel.com/new, import the `LatencyLab` repository.
+2. Set **Root Directory** to `frontend`.
+3. Under **Environment Variables**, add `NEXT_PUBLIC_API_URL` with the Render address from step 1 (no slash at the end).
+4. Deploy, then copy the website's address, which looks like `https://latency-lab.vercel.app`.
+
+### 3. Allow the website to call the API
+
+1. In Render, open `latencylab-api` → **Environment**.
+2. Change `ALLOWED_ORIGINS` to the Vercel address from step 2 (no slash at the end).
+3. Save. Render restarts the API on its own.
+
+Open the website. The left panel should show numbers within a few seconds, or within a minute if the API was asleep.
+
+### 4. Use your own domain (optional)
+
+1. In Vercel, open the project's **Settings → Domains** and add your domain. Vercel shows the DNS records to create where you manage the domain.
+2. In Render, add the new address to `ALLOWED_ORIGINS`, separated by commas: `https://latency-lab.vercel.app,https://example.com,https://www.example.com`.
+
+### Updating
+
+Push to GitHub. Vercel and Render both redeploy on their own.
+
+## Alternative: run the backend on your own server
+
+This replaces Render with a server you rent, running Docker and Caddy. It costs a few euros a month and the API never sleeps.
 
 The steps below use `example.com`. Replace it with your own domain everywhere. The website will be at `example.com` and the API at `api.example.com`.
 
@@ -133,7 +171,7 @@ It should print `ok`.
 
 Open `https://example.com`. The left panel should start showing numbers within a few seconds, and "Measure" on the right should return results.
 
-## Updating
+### Updating your own server
 
 - **Frontend:** push to GitHub. Vercel redeploys on its own.
 - **Backend:** on the server, run:
@@ -148,12 +186,13 @@ Open `https://example.com`. The left panel should start showing numbers within a
 
 | What you see | Likely cause | What to do |
 |---|---|---|
-| Page shows "Can't reach the API" | `ALLOWED_ORIGINS` does not include the exact address in your browser's address bar | Fix `.env` on the server, then `docker compose up -d` |
+| Page shows "Can't reach the API" for up to a minute, then works | The free Render service was asleep | Nothing, this is normal on the free plan |
+| Page keeps showing "Can't reach the API" | `ALLOWED_ORIGINS` does not include the exact address in your browser's address bar | Fix it in Render → Environment (or in `.env` on your own server, then `docker compose up -d`) |
 | Same, only on Vercel preview links | Preview deployments have their own `*.vercel.app` addresses | Expected. Only the addresses in `ALLOWED_ORIGINS` work |
 | `curl https://api.example.com/health` fails with a certificate error | DNS does not point at the server yet, or ports 80/443 are blocked | Check the A record and firewall, then `docker compose logs caddy` |
 | "Too many probes" | The API allows 10 measurements a minute per visitor | Wait a minute |
 
-Useful commands on the server:
+Useful commands on your own server:
 
 ```
 docker compose ps          # what is running
